@@ -6,6 +6,10 @@
 // worst a single bit metastabilizes and the register lands on either the old
 // or the new pointer, both of which are valid. That is the property that makes
 // Gray-coded pointers safe to carry across an unrelated clock domain.
+//
+// The ASYNC_REG attribute asks the tools to keep the two flops together (same
+// slice) for the best mean-time-between-failures, and marks the pair as an
+// intentional synchronizer so report_cdc classifies the crossing as safe.
 // -----------------------------------------------------------------------------
 `default_nettype none
 
@@ -15,20 +19,23 @@ module sync_2ff #(
     input  wire              clk,      // destination-domain clock
     input  wire              rst_n,    // async active-low reset (dest domain)
     input  wire [WIDTH-1:0]  d_in,     // bus from the source domain
-    output reg  [WIDTH-1:0]  q_out     // synchronized bus in the dest domain
+    output wire [WIDTH-1:0]  q_out     // synchronized bus in the dest domain
 );
 
-    reg [WIDTH-1:0] meta;
+    (* ASYNC_REG = "TRUE" *) reg [WIDTH-1:0] sync_ff1;  // first capture (may be metastable)
+    (* ASYNC_REG = "TRUE" *) reg [WIDTH-1:0] sync_ff2;  // second capture (settled)
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            meta  <= '0;
-            q_out <= '0;
+            sync_ff1 <= '0;
+            sync_ff2 <= '0;
         end else begin
-            meta  <= d_in;   // first capture: may go metastable
-            q_out <= meta;   // second capture: allowed a full cycle to settle
+            sync_ff1 <= d_in;      // allowed a full cycle to settle before ff2
+            sync_ff2 <= sync_ff1;
         end
     end
+
+    assign q_out = sync_ff2;
 
 endmodule
 
