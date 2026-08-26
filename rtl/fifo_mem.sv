@@ -2,12 +2,13 @@
 // fifo_mem : Dual-port synchronous RAM used as the FIFO storage.
 //
 //   * Write port is clocked by the write-domain clock (wclk).
-//   * Read  port is combinational: rdata reflects the word at raddr.
+//   * Read  port is combinational (registered addressing is done by the
+//     pointer logic); read data is available for the value at raddr.
 //
 // The memory itself carries no synchronization; all CDC safety lives in the
-// pointer/synchronizer logic. The full/empty guards guarantee the write and
-// read sides never touch the same word simultaneously, so there is no race on
-// any given location.
+// pointer/synchronizer logic. wptr/rptr never address the same location while
+// the enable/full/empty guards are honored, so there is no read/write race on
+// a given word.
 // -----------------------------------------------------------------------------
 `default_nettype none
 
